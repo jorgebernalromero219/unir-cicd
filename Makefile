@@ -34,9 +34,12 @@ test-e2e:
 	docker run -d --network calc-test-e2e --env PYTHONPATH=/opt/calc --name apiserver --env FLASK_APP=app/api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0
 	docker run -d --network calc-test-e2e --name calc-web -p 80:80 calc-web
 	docker create --network calc-test-e2e --name e2e-tests cypress/included:12.17.4 --browser chrome || true
-	docker cp ./test/e2e/cypress e2e-tests:/cypress
+	docker cp ./test/e2e/cypress.config.js e2e-tests:/e2e-project/cypress.config.js
+	docker cp ./test/e2e/cypress e2e-tests:/e2e-project/cypress
+	docker exec e2e-tests mkdir -p /e2e-project/cypress/results || true
+	docker exec e2e-tests chmod -R 777 /e2e-project/cypress/results || true
 	docker start -a e2e-tests || true
-	docker cp e2e-tests:/results ./  || true
+	docker cp e2e-tests:/e2e-project/cypress/results/e2e_result.xml ./results/e2e_result.xml || true
 	docker rm --force apiserver  || true
 	docker rm --force calc-web || true
 	docker rm --force e2e-tests || true

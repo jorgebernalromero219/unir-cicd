@@ -33,13 +33,24 @@ test-e2e:
 	docker rm --force e2e-tests || true
 	docker run -d --network calc-test-e2e --env PYTHONPATH=/opt/calc --name apiserver --env FLASK_APP=app/api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0
 	docker run -d --network calc-test-e2e --name calc-web -p 80:80 calc-web
-	docker create --network calc-test-e2e --name e2e-tests cypress/included:4.9.0 --browser chrome || true
+	docker create --network calc-test-e2e --name e2e-tests \
+           -v $(pwd)/test/e2e:/ \
+           --workdir / \
+           cypress/included:12.17.4 --browser chrome || true
+	
+	docker exec e2e-tests mkdir -p /results || true
+	docker exec e2e-tests chmod -R 777 /results || true # Dar permisos si es necesario
+
 	docker cp ./test/e2e/cypress.json e2e-tests:/cypress.json
 	docker cp ./test/e2e/cypress e2e-tests:/cypress
+
 	docker start -a e2e-tests || true
-	docker cp e2e-tests:/results ./  || true
+
+	docker cp e2e-tests:/results/cypress_result.xml ./results/e2e_result.xml || true
+
 	docker rm --force apiserver  || true
 	docker rm --force calc-web || true
+	docker stop e2e-tests || true
 	docker rm --force e2e-tests || true
 	docker network rm calc-test-e2e || true
 
@@ -48,7 +59,6 @@ run-web:
 
 stop-web:
 	docker stop calc-web
-
 
 start-sonar-server:
 	docker network create calc-sonar || true
@@ -62,8 +72,7 @@ start-sonar-scanner:
 	docker run --rm --network calc-sonar -v `pwd`:/usr/src sonarsource/sonar-scanner-cli
 
 pylint:
-	docker run --rm --volume `pwd`:/opt/calc --env PYTHONPATH=/opt/calc -w /opt/calc calculator-app:latest pylint app/ | tee results/pylint_result.txt
-
+	docker run --rm --volume `pwd`/opt/calc --env PYTHONPATH=/opt/calc -w /opt/calc calculator-app:latest pylint app/ | tee results/pylint_result.txt
 
 deploy-stage:
 	docker stop apiserver || true

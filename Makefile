@@ -39,7 +39,7 @@ test-e2e:
            cypress/included:12.17.4 --browser chrome || true
 
 	docker exec e2e-tests mkdir -p /results || true
-	docker exec e2e-tests chmod -R 777 /results || true # Dar permisos si es necesario
+	docker exec e2e-tests chmod -R 777 /results || true
 
 	docker cp ./test/e2e/cypress.json e2e-tests:/cypress.json
 

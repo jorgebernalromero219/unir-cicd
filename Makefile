@@ -37,8 +37,8 @@ test-e2e:
 
 	echo "Attempting to create Cypress container..."
 	sudo docker create --platform linux/arm64 --network calc-test-e2e --name e2e-tests \
-               --workdir / \
-               cypress/browsers:node-18-chrome-100-ff-100 --browser chrome || true
+			--workdir / \
+			cypress/browsers:node-18-chrome-100-ff-100 --browser chrome || true
 	echo "Cypress container created. Now creating directories and copying files..."
 
 	sudo docker exec e2e-tests mkdir -p /results || true
@@ -49,7 +49,7 @@ test-e2e:
 
 	echo "Starting Cypress container and running tests..."
 	sudo docker start -a e2e-tests || true
-    echo "Cypress tests completed."
+	echo "Cypress tests completed."
 
 	echo "Copying E2E results..."
 	sudo docker cp e2e-tests:/results/cypress_result.xml ./results/e2e_result.xml || true

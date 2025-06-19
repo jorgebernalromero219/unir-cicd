@@ -5,7 +5,7 @@ build:
 	sudo docker build -t calc-web ./web
 
 server:
-	sudo docker run --rm --name apiserver --network-alias apiserver --env PYTHONPATH=/opt/calc --env FLASK_APP=app/api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0
+	sudo docker run --rm --name apiserver --network-alias apiserver --env PYTHONPATH=/opt/calc --env FLASK_APP=app.api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0
 
 test-unit:
 	sudo docker run --name unit-tests --env PYTHONPATH=/opt/calc -w /opt/calc calculator-app:latest pytest --cov --cov-report=xml:results/coverage.xml --cov-report=html:results/coverage --junit-xml=results/unit_result.xml -m unit || true
@@ -14,7 +14,7 @@ test-unit:
 
 test-api:
 	sudo docker network create calc-test-api || true
-	sudo docker run -d --network calc-test-api --env PYTHONPATH=/opt/calc --name apiserver --env FLASK_APP=app/api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0
+	sudo docker run -d --network calc-test-api --env PYTHONPATH=/opt/calc --name apiserver --env FLASK_APP=app.api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0
 	sudo docker run --network calc-test-api --name api-tests --env PYTHONPATH=/opt/calc --env BASE_URL=http://apiserver:5000/ -w /opt/calc calculator-app:latest pytest --junit-xml=results/api_result.xml -m api || true
 	sudo docker cp api-tests:/opt/calc/results ./
 	sudo docker stop apiserver || true
@@ -31,26 +31,24 @@ test-e2e:
 	sudo docker rm --force calc-web || true
 	sudo docker stop e2e-tests || true
 	sudo docker rm --force e2e-tests || true
-	sudo docker run -d --network calc-test-e2e --env PYTHONPATH=/opt/calc --name apiserver --env FLASK_APP=app/api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0
+	sudo docker run -d --network calc-test-e2e --env PYTHONPATH=/opt/calc --name apiserver --env FLASK_APP=app.api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0
 	sudo docker run -d --network calc-test-e2e --name calc-web -p 80:80 calc-web
 
-	docker create --network calc-test-e2e --name e2e-tests \
-           -v $(pwd)/test/e2e:/ \
+	sudo docker create --network calc-test-e2e --name e2e-tests \
            --workdir / \
            cypress/included:12.17.4 --browser chrome || true
 
 	sudo docker exec e2e-tests mkdir -p /results || true
-	sudo docker exec e2e-tests chmod -R 777 /results || true
+	sudo docker exec e2e-tests chmod -R 777 /results || true # Dar permisos si es necesario
 
-	sudo docker cp ./test/e2e/cypress.config.js e2e-tests:/cypress.config.js
-
+	sudo docker cp ./test/e2e/cypress.json e2e-tests:/cypress.json
 	sudo docker cp ./test/e2e/cypress e2e-tests:/cypress
 
 	sudo docker start -a e2e-tests || true
 
 	sudo docker cp e2e-tests:/results/cypress_result.xml ./results/e2e_result.xml || true
 
-	sudo docker rm --force apiserver || true
+	sudo docker rm --force apiserver  || true
 	sudo docker rm --force calc-web || true
 	sudo docker stop e2e-tests || true
 	sudo docker rm --force e2e-tests || true
@@ -79,5 +77,5 @@ pylint:
 deploy-stage:
 	sudo docker stop apiserver || true
 	sudo docker stop calc-web || true
-	sudo docker run -d --rm --name apiserver --network-alias apiserver --env PYTHONPATH=/opt/calc --env FLASK_APP=app/api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0
+	sudo docker run -d --rm --name apiserver --network-alias apiserver --env PYTHONPATH=/opt/calc --env FLASK_APP=app.api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0
 	sudo docker run -d --rm --name calc-web -p 80:80 calc-web

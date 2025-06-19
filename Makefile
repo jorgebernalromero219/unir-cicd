@@ -37,7 +37,7 @@ test-e2e:
 
 	sudo docker create --network calc-test-e2e --name e2e-tests \
            --workdir / \
-           cypress/included:12.17.4 --browser chrome || true
+           cypress/browsers:node18.12.0-chrome107-ff107-e2e --browser chrome || true
 
 	sudo docker exec e2e-tests mkdir -p /results || true
 	sudo docker exec e2e-tests chmod -R 777 /results || true # Dar permisos si es necesario

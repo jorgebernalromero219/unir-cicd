@@ -35,21 +35,27 @@ test-e2e:
 	sudo docker run -d --network calc-test-e2e --env PYTHONPATH=/opt/calc --name apiserver --env FLASK_APP=app.api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0
 	sudo docker run -d --network calc-test-e2e --name calc-web -p 80:80 calc-web
 
-	sudo docker create --network calc-test-e2e --name e2e-tests \
-           --workdir / \
-           cypress/browsers:node18.12.0-chrome107-ff107-e2e --browser chrome || true
+	echo "Attempting to create Cypress container..."
+	sudo docker create --platform linux/arm64 --network calc-test-e2e --name e2e-tests \
+               --workdir / \
+               cypress/browsers:node-18-chrome-100-ff-100 --browser chrome || true
+	echo "Cypress container created. Now creating directories and copying files..."
 
 	sudo docker exec e2e-tests mkdir -p /results || true
-	sudo docker exec e2e-tests chmod -R 777 /results || true # Dar permisos si es necesario
+	sudo docker exec e2e-tests chmod -R 777 /results || true
 
 	sudo docker cp ./test/e2e/cypress.json e2e-tests:/cypress.json
 	sudo docker cp ./test/e2e/cypress e2e-tests:/cypress
 
+	echo "Starting Cypress container and running tests..."
 	sudo docker start -a e2e-tests || true
+    echo "Cypress tests completed."
 
+	echo "Copying E2E results..."
 	sudo docker cp e2e-tests:/results/cypress_result.xml ./results/e2e_result.xml || true
+	echo "E2E results copied. Starting cleanup..."
 
-	sudo docker rm --force apiserver  || true
+	sudo docker rm --force apiserver || true
 	sudo docker rm --force calc-web || true
 	sudo docker stop e2e-tests || true
 	sudo docker rm --force e2e-tests || true

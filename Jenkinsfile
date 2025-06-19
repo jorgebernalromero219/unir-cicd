@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('Verify Agent Environment') {
             steps {
-                echo 'El entorno del agente está pre-construido con Docker CLI, Git y Make (desde my-jenkins-agent:latest).'
+                echo 'El entorno del agente está pre-construido con Docker CLI, Git, y Make (desde my-jenkins-agent:latest).'
                 sh 'docker --version'
                 sh 'make --version'
                 sh 'git --version'
@@ -50,7 +50,7 @@ pipeline {
                 echo 'Ejecutando pruebas de API!'
                 sh '''
                     echo "Limpiando contenedores y redes Docker antiguos antes de las pruebas de API..."
-                    sudo docker stop apiserver || true // Usamos sudo porque los comandos docker están en el Makefile.
+                    sudo docker stop apiserver || true
                     sudo docker rm --force apiserver || true
                     sudo docker network rm calc-test-api || true
                 '''
@@ -70,7 +70,7 @@ pipeline {
                     sudo docker rm --force calc-web || true
                     sudo docker network rm calc-test-e2e || true
                 '''
-
+                sh 'make test-e2e'
                 archiveArtifacts artifacts: 'results/e2e_result.xml'
             }
         }

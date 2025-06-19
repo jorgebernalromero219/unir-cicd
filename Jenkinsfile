@@ -1,18 +1,39 @@
 pipeline {
     agent {
         docker {
-            image 'my-jenkins-agent:latest'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
+            image 'ubuntu:22.04'
+            args '-u 0:0 -v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
 
     stages {
-        stage('Verify Agent Environment') {
+        stage('Prepare Agent Environment') {
             steps {
-                echo 'Agent environment is now pre-built with Docker CLI, Git, and Make (from my-jenkins-agent:latest).'
-                sh 'docker --version'
-                sh 'make --version'
-                sh 'git --version'
+                echo 'Updating apt and installing make, git, and docker-ce-cli within the agent container...'
+                sh '''
+                    set -ex
+
+                    apt-get update
+                    apt-get install -y curl gnupg lsb-release
+                    install -m 0755 -d /etc/apt/keyrings
+                    
+                    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+                    chmod a+r /etc/apt/keyrings/docker.gpg
+
+                    # Construir la cadena para el repositorio de Docker de forma robusta
+                    # Variables de shell para la arquitectura y el nombre de la distribución
+                    ARCHITECTURE=$(dpkg --print-architecture)
+                    DISTRO_CODENAME=$(lsb_release -cs)
+                    echo "deb [arch=${ARCHITECTURE} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu ${DISTRO_CODENAME} stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+                    
+                    apt-get update
+                    
+                    apt-get install -y docker-ce-cli make git
+
+                    groupadd -r docker || true
+                    gpasswd -a jenkins docker || true
+                    chmod 666 /var/run/docker.sock || true
+                '''
             }
         }
 
@@ -50,9 +71,9 @@ pipeline {
                 echo 'Running API Tests!'
                 sh '''
                     echo "Cleaning up old Docker containers and networks before API Tests..."
-                    sudo docker stop apiserver || true // Aseguramos sudo
-                    sudo docker rm --force apiserver || true
-                    sudo docker network rm calc-test-api || true
+                    docker stop apiserver || true
+                    docker rm --force apiserver || true
+                    docker network rm calc-test-api || true
                 '''
                 sh 'make test-api'
                 archiveArtifacts artifacts: 'results/api_result.xml'
@@ -64,11 +85,11 @@ pipeline {
                 echo 'Running E2E Tests!'
                 sh '''
                     echo "Cleaning up old Docker containers and networks before E2E Tests..."
-                    sudo docker stop apiserver || true // Aseguramos sudo
-                    sudo docker rm --force apiserver || true
-                    sudo docker stop calc-web || true
-                    sudo docker rm --force calc-web || true
-                    sudo docker network rm calc-test-e2e || true
+                    docker stop apiserver || true
+                    docker rm --force apiserver || true
+                    docker stop calc-web || true
+                    docker rm --force calc-web || true
+                    docker network rm calc-test-e2e || true
                 '''
                 sh 'make test-e2e'
                 archiveArtifacts artifacts: 'results/e2e_result.xml'

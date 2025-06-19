@@ -1,39 +1,18 @@
 pipeline {
     agent {
         docker {
-            image 'ubuntu:22.04'
-            args '-u 0:0 -v /var/run/docker.sock:/var/run/docker.sock'
+            image 'my-jenkins-agent:latest'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
 
     stages {
-        stage('Prepare Agent Environment') {
+        stage('Verify Agent Environment') {
             steps {
-                echo 'Updating apt and installing make, git, and docker-ce-cli within the agent container...'
-                sh '''
-                    set -ex
-
-                    apt-get update
-                    apt-get install -y curl gnupg lsb-release
-                    install -m 0755 -d /etc/apt/keyrings
-                    
-                    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-                    chmod a+r /etc/apt/keyrings/docker.gpg
-
-                    # Construir la cadena para el repositorio de Docker de forma robusta
-                    # Variables de shell para la arquitectura y el nombre de la distribución
-                    ARCHITECTURE=$(dpkg --print-architecture)
-                    DISTRO_CODENAME=$(lsb_release -cs)
-                    echo "deb [arch=${ARCHITECTURE} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu ${DISTRO_CODENAME} stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-                    
-                    apt-get update
-                    
-                    apt-get install -y docker-ce-cli make git
-
-                    groupadd -r docker || true
-                    gpasswd -a jenkins docker || true
-                    chmod 666 /var/run/docker.sock || true
-                '''
+                echo 'El entorno del agente está pre-construido con Docker CLI, Git y Make (desde my-jenkins-agent:latest).'
+                sh 'docker --version'
+                sh 'make --version'
+                sh 'git --version'
             }
         }
 
@@ -53,14 +32,14 @@ pipeline {
 
         stage('Build') {
             steps {
-                echo 'Building stage!'
+                echo 'Construyendo la etapa de Build!'
                 sh 'make build'
             }
         }
 
         stage('Unit Tests') {
             steps {
-                echo 'Running Unit Tests!'
+                echo 'Ejecutando pruebas unitarias!'
                 sh 'make test-unit'
                 archiveArtifacts artifacts: 'results/unit_result.xml'
             }
@@ -68,12 +47,12 @@ pipeline {
 
         stage('API Tests') {
             steps {
-                echo 'Running API Tests!'
+                echo 'Ejecutando pruebas de API!'
                 sh '''
-                    echo "Cleaning up old Docker containers and networks before API Tests..."
-                    docker stop apiserver || true
-                    docker rm --force apiserver || true
-                    docker network rm calc-test-api || true
+                    echo "Limpiando contenedores y redes Docker antiguos antes de las pruebas de API..."
+                    sudo docker stop apiserver || true // Usamos sudo porque los comandos docker están en el Makefile.
+                    sudo docker rm --force apiserver || true
+                    sudo docker network rm calc-test-api || true
                 '''
                 sh 'make test-api'
                 archiveArtifacts artifacts: 'results/api_result.xml'
@@ -82,16 +61,16 @@ pipeline {
 
         stage('E2E Tests') {
             steps {
-                echo 'Running E2E Tests!'
+                echo 'Ejecutando pruebas E2E!'
                 sh '''
-                    echo "Cleaning up old Docker containers and networks before E2E Tests..."
-                    docker stop apiserver || true
-                    docker rm --force apiserver || true
-                    docker stop calc-web || true
-                    docker rm --force calc-web || true
-                    docker network rm calc-test-e2e || true
+                    echo "Limpiando contenedores y redes Docker antiguos antes de las pruebas E2E..."
+                    sudo docker stop apiserver || true
+                    sudo docker rm --force apiserver || true
+                    sudo docker stop calc-web || true
+                    sudo docker rm --force calc-web || true
+                    sudo docker network rm calc-test-e2e || true
                 '''
-                sh 'make test-e2e'
+
                 archiveArtifacts artifacts: 'results/e2e_result.xml'
             }
         }
@@ -99,12 +78,12 @@ pipeline {
 
     post {
         always {
-            echo 'Post-build actions always executed.'
+            echo 'Las acciones post-construcción siempre se ejecutan.'
             junit 'results/*_result.xml'
             cleanWs()
         }
         failure {
-            echo "Pipeline failed! Sending email."
+            echo "¡El pipeline ha fallado! Enviando correo electrónico."
             /*
             mail to: 'tu_correo@ejemplo.com',
                  subject: "Jenkins Pipeline FALLIDO: ${env.JOB_NAME} #${env.BUILD_NUMBER}",

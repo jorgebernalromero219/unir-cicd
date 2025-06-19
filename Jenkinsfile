@@ -50,9 +50,9 @@ pipeline {
                 echo 'Running API Tests!'
                 sh '''
                     echo "Cleaning up old Docker containers and networks before API Tests..."
-                    docker stop apiserver || true
-                    docker rm --force apiserver || true
-                    docker network rm calc-test-api || true
+                    sudo docker stop apiserver || true // Aseguramos sudo
+                    sudo docker rm --force apiserver || true
+                    sudo docker network rm calc-test-api || true
                 '''
                 sh 'make test-api'
                 archiveArtifacts artifacts: 'results/api_result.xml'
@@ -64,11 +64,11 @@ pipeline {
                 echo 'Running E2E Tests!'
                 sh '''
                     echo "Cleaning up old Docker containers and networks before E2E Tests..."
-                    docker stop apiserver || true
-                    docker rm --force apiserver || true
-                    docker stop calc-web || true
-                    docker rm --force calc-web || true
-                    docker network rm calc-test-e2e || true
+                    sudo docker stop apiserver || true // Aseguramos sudo
+                    sudo docker rm --force apiserver || true
+                    sudo docker stop calc-web || true
+                    sudo docker rm --force calc-web || true
+                    sudo docker network rm calc-test-e2e || true
                 '''
                 sh 'make test-e2e'
                 archiveArtifacts artifacts: 'results/e2e_result.xml'

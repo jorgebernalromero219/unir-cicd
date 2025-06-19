@@ -26,28 +26,44 @@ test-api:
 test-e2e:
 	set -ex
 	sudo docker network create calc-test-e2e || true
+	sleep 1
+
 	sudo docker stop apiserver || true
 	sudo docker rm --force apiserver || true
 	sudo docker stop calc-web || true
 	sudo docker rm --force calc-web || true
-	sudo docker network rm calc-test-e2e || true
+	sudo docker stop e2e-tests || true
+	sudo docker rm --force e2e-tests || true
 
+	echo "Launching API and Web servers for E2E tests..."
 	sudo docker run -d --network calc-test-e2e --env PYTHONPATH=/opt/calc --name apiserver --env FLASK_APP=app.api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0
 	sudo docker run -d --network calc-test-e2e --name calc-web -p 80:80 calc-web
 
-	cd test/e2e
+	echo "Attempting to create Cypress container..."
+	sudo docker create --platform linux/arm64 --network calc-test-e2e --name e2e-tests \
+				--workdir / \
+				cypress/browsers:node-18-chrome-100-ff-100 --browser chrome || true
 
-	npm install cypress@12.17.4
+	echo "Cypress container created. Now creating directories and copying files..."
 
-	mkdir -p cypress/results || true
-	chmod -R 777 cypress/results || true
+	sudo docker exec e2e-tests mkdir -p /results || true
+	sudo docker exec e2e-tests chmod -R 777 /results || true
 
-	./node_modules/.bin/cypress run --browser chrome || true
+	sudo docker cp ./test/e2e/cypress.json e2e-tests:/cypress.json
+	sudo docker cp ./test/e2e/cypress e2e-tests:/cypress
 
-	mv cypress/results/cypress_result.xml ../../results/e2e_result.xml || true
+	echo "Starting Cypress container and running tests..."
+	sudo docker start -a e2e-tests || true
+	echo "Cypress tests completed."
+
+	echo "Copying E2E results..."
+	sudo docker cp e2e-tests:/results/cypress_result.xml ./results/e2e_result.xml || true
+	echo "E2E results copied. Starting cleanup..."
 
 	sudo docker rm --force apiserver || true
 	sudo docker rm --force calc-web || true
+	sudo docker stop e2e-tests || true
+	sudo docker rm --force e2e-tests || true
 	sudo docker network rm calc-test-e2e || true
 
 run-web:

@@ -24,6 +24,7 @@ test-api:
 	sudo docker network rm calc-test-api || true
 
 test-e2e:
+	set -ex
 	sudo docker network create calc-test-e2e || true
 	sudo docker stop apiserver || true
 	sudo docker rm --force apiserver || true

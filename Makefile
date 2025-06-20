@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 .PHONY: all $(MAKECMDGOALS)
 
 build:
@@ -24,7 +26,6 @@ test-api:
 	sudo docker network rm calc-test-api || true
 
 test-e2e:
-	SHELL := /bin/bash
 	set -ex
 	sudo docker stop apiserver || true
 	sudo docker rm --force apiserver || true

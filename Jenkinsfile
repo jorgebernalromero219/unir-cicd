@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('Verify Agent Environment') {
             steps {
-                echo 'El entorno del agente está pre-construido con Docker CLI, Git, y Make (desde my-jenkins-agent:latest).'
+                echo 'Agent environment is now pre-built with Docker CLI, Git, and Make (from my-jenkins-agent:latest).'
                 sh 'docker --version'
                 sh 'make --version'
                 sh 'git --version'

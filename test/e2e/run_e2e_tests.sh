@@ -31,11 +31,15 @@ E2E_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --name e2e-tests-r
                        --workdir /cypress-app \
                        my-custom-cypress:latest bash -c " \
                          set -ex; \
+                         npm cache clean --force; \ # <<< AÑADIDO: Limpiar caché de npm
                          npm install cypress@12.17.4; \
-                         ./node_modules/.bin/cypress install; \ # <<< AÑADIDO: Ejecutar cypress install para descargar el binario
+                         ./node_modules/.bin/cypress install; \ # Asegurar instalación del binario
                          mkdir -p results; \
                          chmod -R 777 results; \
-                         ./node_modules/.bin/cypress run --browser chrome --reporter junit --reporter-options 'mochaFile=results/cypress_result.xml,toConsole=true'; \
+                         # --- CAMBIO CLAVE: Usar 'electron' o 'chromium' si 'chrome' falla ---
+                         # Es más probable que 'electron' funcione en la emulación o en un entorno headless.
+                         # Si 'chrome' sigue dando problemas, prueba 'electron'.
+                         ./node_modules/.bin/cypress run --browser electron --reporter junit --reporter-options 'mochaFile=results/cypress_result.xml,toConsole=true'; \
                        ")
     
 echo "Cypress Container ID: $E2E_CONTAINER_ID"

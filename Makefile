@@ -24,6 +24,7 @@ test-api:
 	sudo docker network rm calc-test-api || true
 
 test-e2e:
+	SHELL := /bin/bash
 	set -ex
 	sudo docker stop apiserver || true
 	sudo docker rm --force apiserver || true
@@ -39,16 +40,16 @@ test-e2e:
 	sleep 1
 
 	echo "Launching API and Web servers for E2E tests..."
-	API_CONTAINER_ID=$$(sudo docker run -d --network calc-test-e2e --env PYTHONPATH=/opt/calc --name apiserver --env FLASK_APP=app.api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0)
-	WEB_CONTAINER_ID=$$(sudo docker run -d --network calc-test-e2e --name calc-web -p 80:80 calc-web)
+	API_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --env PYTHONPATH=/opt/calc --name apiserver --env FLASK_APP=app.api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0)
+	WEB_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --name calc-web -p 80:80 calc-web)
 
-	echo "API Server ID: $$API_CONTAINER_ID"
-	echo "Web Server ID: $$WEB_CONTAINER_ID"
+	echo "API Server ID: $API_CONTAINER_ID"
+	echo "Web Server ID: $WEB_CONTAINER_ID"
 
 	sleep 5
 
 	echo "Attempting to run Cypress tests..."
-	E2E_CONTAINER_ID=$$(sudo docker run -d --network calc-test-e2e --name e2e-tests \
+	E2E_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --name e2e-tests \
                            -v $(pwd)/test/e2e:/cypress-app \
                            --workdir /cypress-app \
                            my-custom-cypress:latest bash -c " \
@@ -59,18 +60,18 @@ test-e2e:
                              cypress run --browser chrome --reporter junit --reporter-options 'mochaFile=results/cypress_result.xml,toConsole=true'; \
                            ")
 	
-	echo "Cypress Container ID: $$E2E_CONTAINER_ID"
+	echo "Cypress Container ID: $E2E_CONTAINER_ID"
 
 	echo "Waiting for Cypress tests to complete..."
-	CYPRESS_EXIT_CODE=$$(sudo docker wait "$$E2E_CONTAINER_ID") || true
-	echo "Cypress tests completed with exit code: $$CYPRESS_EXIT_CODE."
+	CYPRESS_EXIT_CODE=$(sudo docker wait "$E2E_CONTAINER_ID" || true)
+	echo "Cypress tests completed with exit code: $CYPRESS_EXIT_CODE."
 
 	echo "Copying E2E results..."
-	sudo docker cp "$$E2E_CONTAINER_ID":/cypress-app/results/cypress_result.xml ./results/e2e_result.xml || true
+	sudo docker cp "$E2E_CONTAINER_ID":/cypress-app/results/cypress_result.xml ./results/e2e_result.xml || true
 	echo "E2E results copied. Starting cleanup..."
 
-	sudo docker rm --force "$$API_CONTAINER_ID" || true
-	sudo docker rm --force "$$WEB_CONTAINER_ID" || true
-	sudo docker stop "$$E2E_CONTAINER_ID" || true
-	sudo docker rm --force "$$E2E_CONTAINER_ID" || true
+	sudo docker rm --force "$API_CONTAINER_ID" || true
+	sudo docker rm --force "$WEB_CONTAINER_ID" || true
+	sudo docker stop "$E2E_CONTAINER_ID" || true
+	sudo docker rm --force "$E2E_CONTAINER_ID" || true
 	sudo docker network rm calc-test-e2e || true

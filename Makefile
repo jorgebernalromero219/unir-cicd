@@ -41,8 +41,8 @@ test-e2e:
 	sleep 1
 
 	echo "Launching API and Web servers for E2E tests..."
-	API_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --env PYTHONPATH=/opt/calc --name apiserver --env FLASK_APP=app.api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0)
-	WEB_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --name calc-web -p 80:80 calc-web)
+	API_CONTAINER_ID=$$(bash -c 'sudo docker run -d --network calc-test-e2e --env PYTHONPATH=/opt/calc --name apiserver --env FLASK_APP=app.api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0')
+	WEB_CONTAINER_ID=$$(bash -c 'sudo docker run -d --network calc-test-e2e --name calc-web -p 80:80 calc-web')
 
 	echo "API Server ID: $API_CONTAINER_ID"
 	echo "Web Server ID: $WEB_CONTAINER_ID"
@@ -50,7 +50,7 @@ test-e2e:
 	sleep 5
 
 	echo "Attempting to run Cypress tests..."
-	E2E_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --name e2e-tests \
+	E2E_CONTAINER_ID=$$(bash -c 'sudo docker run -d --network calc-test-e2e --name e2e-tests \
                            -v $(pwd)/test/e2e:/cypress-app \
                            --workdir /cypress-app \
                            my-custom-cypress:latest bash -c " \
@@ -58,13 +58,13 @@ test-e2e:
                              npm install cypress@12.17.4; \
                              mkdir -p results; \
                              chmod -R 777 results; \
-                             cypress run --browser chrome --reporter junit --reporter-options 'mochaFile=results/cypress_result.xml,toConsole=true'; \
-                           ")
+                             cypress run --browser chrome --reporter junit --reporter-options \"mochaFile=results/cypress_result.xml,toConsole=true\"; \
+                           "')
 	
 	echo "Cypress Container ID: $E2E_CONTAINER_ID"
 
 	echo "Waiting for Cypress tests to complete..."
-	CYPRESS_EXIT_CODE=$(sudo docker wait "$E2E_CONTAINER_ID" || true)
+	CYPRESS_EXIT_CODE=$$(sudo docker wait "$E2E_CONTAINER_ID" || true)
 	echo "Cypress tests completed with exit code: $CYPRESS_EXIT_CODE."
 
 	echo "Copying E2E results..."

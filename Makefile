@@ -26,63 +26,30 @@ test-api:
 	sudo docker network rm calc-test-api || true
 
 test-e2e:
-	$(SHELL) -c '\
-			set -ex; \
-			echo "Starting E2E Tests with a robust bash script..."; \
-			\
-			# 1. Limpieza agresiva de contenedores y redes residuales\
-			sudo docker stop apiserver || true;\
-			sudo docker rm --force apiserver || true;\
-			sudo docker stop calc-web || true;\
-			sudo docker rm --force calc-web || true;\
-			sudo docker stop e2e-tests || true;\
-			sudo docker rm --force e2e-tests || true;\
-			sudo docker network rm calc-test-e2e || true;\
-			sleep 1;\
-			\
-			# 2. Crear la red Docker y esperar\
-			sudo docker network create calc-test-e2e || true;\
-			sleep 2; # Aumentar pausa para asegurar que la red esté lista\
-			\
-			# 3. Lanzar el API y el servidor web y capturar IDs correctamente\
-			echo "Launching API and Web servers for E2E tests...";\
-			API_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --env PYTHONPATH=/opt/calc --name apiserver --env FLASK_APP=app.api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0);\
-			WEB_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --name calc-web -p 80:80 calc-web);\
-			\
-			echo "API Server ID: $$API_CONTAINER_ID";\
-			echo "Web Server ID: $$WEB_CONTAINER_ID";\
-			sleep 5; # Esperar a que los servidores inicien completamente\
-			\
-			# 4. Lanzar Cypress y capturar su ID\
-			echo "Attempting to run Cypress tests...";\
-			E2E_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --name e2e-tests \
-								-v $(pwd)/test/e2e:/cypress-app \
-								--workdir /cypress-app \
-								my-custom-cypress:latest bash -c " \
-									set -ex; \
-									npm install cypress@12.17.4; \
-									mkdir -p results; \
-									chmod -R 777 results; \
-									cypress run --browser chrome --reporter junit --reporter-options \'mochaFile=results/cypress_result.xml,toConsole=true\'; \
-								");\
-			echo "Cypress Container ID: $$E2E_CONTAINER_ID";\
-			\
-			# 5. Esperar a que Cypress termine\
-			echo "Waiting for Cypress tests to complete...";\
-			CYPRESS_EXIT_CODE=$(sudo docker wait "$$E2E_CONTAINER_ID");\
-			echo "Cypress tests completed with exit code: $$CYPRESS_EXIT_CODE.";\
-			\
-			# 6. Copiar resultados\
-			echo "Copying E2E results...";\
-			sudo docker cp "$$E2E_CONTAINER_ID":/cypress-app/results/cypress_result.xml ./results/e2e_result.xml || true;\
-			echo "E2E results copied. Starting cleanup...";\
-			\
-			# 7. Limpieza final de todos los contenedores y la red\
-			sudo docker stop "$$API_CONTAINER_ID" || true;\
-			sudo docker rm --force "$$API_CONTAINER_ID" || true;\
-			sudo docker stop "$$WEB_CONTAINER_ID" || true;\
-			sudo docker rm --force "$$WEB_CONTAINER_ID" || true;\
-			sudo docker stop "$$E2E_CONTAINER_ID" || true;\
-			sudo docker rm --force "$$E2E_CONTAINER_ID" || true;\
-			sudo docker network rm calc-test-e2e || true;\
-	'
+	./test/e2e/run_e2e_tests.sh
+
+run-web:
+	sudo docker run --rm --volume `pwd`/web:/usr/share/nginx/html  --volume `pwd`/web/constants.local.js:/usr/share/nginx/html/constants.js --name calc-web -p 80:80 nginx
+
+stop-web:
+	sudo docker stop calc-web
+
+start-sonar-server:
+	sudo docker network create calc-sonar || true
+	sudo docker run -d --rm --stop-timeout 60 --network calc-sonar --name sonarqube-server -p 9000:9000 --volume `pwd`/sonar/data:/opt/sonarqube/data --volume `pwd`/sonar/logs:/opt/sonarqube/logs sonarqube:8.3.1-community
+
+stop-sonar-server:
+	sudo docker stop sonarqube-server
+	sudo docker network rm calc-sonar || true
+
+start-sonar-scanner:
+	sudo docker run --rm --network calc-sonar -v `pwd`:/usr/src sonarsource/sonar-scanner-cli
+
+pylint:
+	sudo docker run --rm --volume `pwd`/opt/calc --env PYTHONPATH=/opt/calc -w /opt/calc calculator-app:latest pylint app/ | tee results/pylint_result.txt
+
+deploy-stage:
+	sudo docker stop apiserver || true
+	sudo docker stop calc-web || true
+	sudo docker run -d --rm --name apiserver --network-alias apiserver --env PYTHONPATH=/opt/calc --env FLASK_APP=app.api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0
+	sudo docker run -d --rm --name calc-web -p 80:80 calc-web

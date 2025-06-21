@@ -6,7 +6,7 @@ build:
 	sudo docker build -t calculator-app .
 	sudo docker build -t calc-web ./web
 
-sudo docker run --rm --name apiserver --network-alias apiserver --env PYTHONPATH=/opt/calc --env FLASK_APP=app.api.py -p 5001:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0
+	sudo docker run --rm --name apiserver --network-alias apiserver --env PYTHONPATH=/opt/calc --env FLASK_APP=app.api.py -p 5001:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0
 
 test-unit:
 	sudo docker run --name unit-tests --env PYTHONPATH=/opt/calc -w /opt/calc calculator-app:latest pytest --cov --cov-report=xml:results/coverage.xml --cov-report=html:results/coverage --junit-xml=results/unit_result.xml -m unit || true

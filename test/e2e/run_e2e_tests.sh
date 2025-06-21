@@ -17,7 +17,7 @@ sudo docker network create calc-test-e2e || true
 sleep 2
 
 echo "Launching API and Web servers for E2E tests..."
-API_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --name apiserver-e2e --env FLASK_APP=app.api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0)
+API_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --env PYTHONPATH=/opt/calc --name apiserver-e2e --env FLASK_APP=app.api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0)
 WEB_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --name calc-web-e2e -p 80:80 calc-web)
 
 echo "API Server ID: $API_CONTAINER_ID"
@@ -31,15 +31,10 @@ E2E_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --name e2e-tests-r
                        --workdir /cypress-app \
                        my-custom-cypress:latest bash -c " \
                          set -ex; \
-                         npm cache clean --force; \ # <<< AÑADIDO: Limpiar caché de npm
-                         npm install cypress@12.17.4; \
-                         ./node_modules/.bin/cypress install; \ # Asegurar instalación del binario
+                         # --- CAMBIO CLAVE: YA NO HACEMOS npm install ni cypress install aquí ---
                          mkdir -p results; \
                          chmod -R 777 results; \
-                         # --- CAMBIO CLAVE: Usar 'electron' o 'chromium' si 'chrome' falla ---
-                         # Es más probable que 'electron' funcione en la emulación o en un entorno headless.
-                         # Si 'chrome' sigue dando problemas, prueba 'electron'.
-                         ./node_modules/.bin/cypress run --browser electron --reporter junit --reporter-options 'mochaFile=results/cypress_result.xml,toConsole=true'; \
+                         cypress run --browser chrome --reporter junit --reporter-options 'mochaFile=results/cypress_result.xml,toConsole=true'; \
                        ")
     
 echo "Cypress Container ID: $E2E_CONTAINER_ID"

@@ -16,10 +16,10 @@ test-unit:
 
 test-api:
 	set -ex
-	sudo docker stop apiserver-api-test || true
-	sudo docker rm --force apiserver-api-test || true
-	sudo docker stop api-tests-runner || true
-	sudo docker rm --force api-tests-runner || true
+	sudo docker stop apiserver-api || true
+	sudo docker rm --force apiserver-api || true
+	sudo docker stop api-tests || true
+	sudo docker rm --force api-tests || true
 	sudo docker network rm calc-test-api || true
 	
 	sleep 5
@@ -27,16 +27,16 @@ test-api:
 	sudo docker network create calc-test-api || true
 	sleep 1
 
-	API_CONTAINER_ID_API=$(sudo docker run -d --network calc-test-api --env PYTHONPATH=/opt/calc --name apiserver-api-test --env FLASK_APP=app.api.py -p 5001:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0)
+	API_CONTAINER_ID_API=$(sudo docker run -d --network calc-test-api --env PYTHONPATH=/opt/calc --name apiserver-api --env FLASK_APP=app.api.py -p 5001:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0)
 	
-	sudo docker run --network calc-test-api --name api-tests-runner --env PYTHONPATH=/opt/calc --env BASE_URL=http://apiserver-api-test:5000/ -w /opt/calc calculator-app:latest pytest --junit-xml=results/api_result.xml -m api || true
+	sudo docker run --network calc-test-api --name api-tests --env PYTHONPATH=/opt/calc --env BASE_URL=http://apiserver-api:5000/ -w /opt/calc calculator-app:latest pytest --junit-xml=results/api_result.xml -m api || true
 
-	sudo docker cp api-tests-runner:/opt/calc/results ./
+	sudo docker cp api-tests:/opt/calc/results ./
 
 	sudo docker stop "$API_CONTAINER_ID_API" || true
 	sudo docker rm --force "$API_CONTAINER_ID_API" || true
-	sudo docker stop api-tests-runner || true
-	sudo docker rm --force api-tests-runner || true
+	sudo docker stop api-tests || true
+	sudo docker rm --force api-tests || true
 	sudo docker network rm calc-test-api || true
 
 test-e2e:

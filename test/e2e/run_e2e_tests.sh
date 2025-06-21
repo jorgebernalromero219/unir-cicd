@@ -32,8 +32,8 @@ E2E_CONTAINER_ID=$(sudo docker run -d --user root --network calc-test-e2e --name
                        my-custom-cypress:latest bash -c " \
                          set -ex; \
                          npm cache clean --force; \
-                         npm install cypress@12.17.4; \ # Instalar Cypress CLI localmente
-                         ./node_modules/.bin/cypress install; \ # Asegurar instalación del binario
+                         npm install cypress@12.17.4; \
+                         ./node_modules/.bin/cypress install; \
                          mkdir -p results; \
                          chmod -R 777 results; \
                          cypress run --browser electron --reporter junit --reporter-options 'mochaFile=results/cypress_result.xml,toConsole=true'; \

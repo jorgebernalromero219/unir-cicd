@@ -57,7 +57,7 @@ test-e2e:
 	sleep 2
 
 	API_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --env PYTHONPATH=/opt/calc --name apiserver-e2e-test -p 5001:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0)
-	WEB_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --name calc-web-e2e-test -p 80:80 calc-web) # El puerto 80 no suele dar conflicto
+	WEB_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --name calc-web-e2e-test -p 80:80 calc-web)
 
 	echo "API Server ID: $API_CONTAINER_ID"
 	echo "Web Server ID: $WEB_CONTAINER_ID"
@@ -92,7 +92,7 @@ test-e2e:
 	exit "$CYPRESS_EXIT_CODE"
 
 run-web:
-	sudo docker run --rm --volume `pwd`/web:/usr/share/nginx/html  --volume `pwd`/web/constants.local.js:/usr/share/nginx/html/constants.js --name calc-web -p 80:80 nginx
+	sudo docker run --rm --volume `pwd`/web:/usr/share/nginx/html  --volume `pwd`/web/constants.local.js:/usr/share/nginx/html/constants.js --name calc-web -p 5001:80 nginx
 
 stop-web:
 	sudo docker stop calc-web

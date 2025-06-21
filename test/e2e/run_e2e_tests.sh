@@ -17,7 +17,7 @@ sudo docker network create calc-test-e2e || true
 sleep 2
 
 echo "Launching API and Web servers for E2E tests..."
-API_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --env PYTHONPATH=/opt/calc --name apiserver-e2e --env FLASK_APP=app.api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0)
+API_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --name apiserver-e2e --env FLASK_APP=app.api.py -p 5000:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0)
 WEB_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --name calc-web-e2e -p 80:80 calc-web)
 
 echo "API Server ID: $API_CONTAINER_ID"
@@ -26,15 +26,18 @@ echo "Web Server ID: $WEB_CONTAINER_ID"
 sleep 5
 
 echo "Attempting to run Cypress tests..."
-E2E_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --name e2e-tests-runner \
+E2E_CONTAINER_ID=$(sudo docker run -d --user root --network calc-test-e2e --name e2e-tests-runner \
                        -v "$(pwd)":/cypress-app \
                        --workdir /cypress-app \
                        my-custom-cypress:latest bash -c " \
                          set -ex; \
-                         # --- CAMBIO CLAVE: YA NO HACEMOS npm install ni cypress install aquí ---
+                         npm cache clean --force; \
+                         npm install cypress@12.17.4; \
+                         ./node_modules/.bin/cypress install; \
                          mkdir -p results; \
                          chmod -R 777 results; \
-                         cypress run --browser chrome --reporter junit --reporter-options 'mochaFile=results/cypress_result.xml,toConsole=true'; \
+                         # --- CAMBIO CLAVE: Usar 'electron' como navegador ---
+                         ./node_modules/.bin/cypress run --browser electron --reporter junit --reporter-options 'mochaFile=results/cypress_result.xml,toConsole=true'; \
                        ")
     
 echo "Cypress Container ID: $E2E_CONTAINER_ID"

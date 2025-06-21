@@ -38,7 +38,54 @@ test-api:
 	sudo docker network rm calc-test-api || true
 
 test-e2e:
-	./test/e2e/run_e2e_tests.sh
+	set -ex
+	sudo docker stop apiserver-e2e-test || true
+	sudo docker rm --force apiserver-e2e-test || true
+	sudo docker stop calc-web-e2e-test || true
+	sudo docker rm --force calc-web-e2e-test || true
+	sudo docker stop e2e-tests-runner || true
+	sudo docker rm --force e2e-tests-runner || true
+	sudo docker network rm calc-test-e2e || true
+	sleep 5
+
+	echo "Creando red y lanzando servicios API y Web para E2E..."
+	sudo docker network create calc-test-e2e || true
+	sleep 2
+
+	API_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --env PYTHONPATH=/opt/calc --name apiserver-e2e-test -p 5001:5000 -w /opt/calc calculator-app:latest flask run --host=0.0.0.0)
+	WEB_CONTAINER_ID=$(sudo docker run -d --network calc-test-e2e --name calc-web-e2e-test -p 80:80 calc-web)
+
+	echo "API Server ID: $API_CONTAINER_ID"
+	echo "Web Server ID: $WEB_CONTAINER_ID"
+	sleep 5
+
+	echo "Navegando a test/e2e e instalando/ejecutando Cypress..."
+	cd test/e2e
+	npm cache clean --force || true
+	npm install cypress@12.17.4 || true
+	./node_modules/.bin/cypress install || true
+	
+	mkdir -p results || true
+	chmod -R 777 results || true
+
+	echo "Ejecutando Cypress..."
+	./node_modules/.bin/cypress run --browser chrome --reporter junit --reporter-options 'mochaFile=results/cypress_result.xml,toConsole=true'
+
+	CYPRESS_EXIT_CODE=$?
+
+	echo "Cypress tests completed with exit code: $CYPRESS_EXIT_CODE."
+
+	echo "Copiando resultados E2E..."
+	cp results/cypress_result.xml ../../results/e2e_result.xml || true
+
+	echo "Limpieza final de contenedores y red E2E..."
+	sudo docker stop "$API_CONTAINER_ID" || true
+	sudo docker rm --force "$API_CONTAINER_ID" || true
+	sudo docker stop "$WEB_CONTAINER_ID" || true
+	sudo docker rm --force "$WEB_CONTAINER_ID" || true
+	sudo docker network rm calc-test-e2e || true
+
+	exit "$CYPRESS_EXIT_CODE"
 
 run-web:
 	sudo docker run --rm --volume `pwd`/web:/usr/share/nginx/html  --volume `pwd`/web/constants.local.js:/usr/share/nginx/html/constants.js --name calc-web -p 5001:80 nginx
